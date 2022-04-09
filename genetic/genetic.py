@@ -109,7 +109,7 @@ class Population():
     def get_accuracy(self):
         return self.__ACCURACY
     
-    def get_best(self) -> Tuple[Tuple, float]:
+    def get_best(self):
         return self.__best
 
     def __init__(self, populus_size: int, dim: int, dels: int, maxes: Tuple[float], function: Callable):
@@ -140,7 +140,9 @@ class Population():
         return (x * self.step)
         
     def count(self) -> list:
-        if self.__gen_res is not None: self.__best = (tuple(), self.__gen_res[0][0])
+        #if self.__gen_res is None:
+            #print("AAAAAAA")
+        self.__best = None #(tuple(), self.__gen_res[0][0])
 
         self.__gen_res = []
         for i in range(len(self.__population)):

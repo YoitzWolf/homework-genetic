@@ -158,7 +158,8 @@ def generate(
     with open(TABLESF + "/generations.csv", "w", encoding="utf8", newline='') as argfile:
         writer = csv.writer(argfile, delimiter=";")
         writer.writerow(["Итеррация"] + [f"$x_{i}$" for i in range(1, N+1)] + ["F(x)"])
-
+        print(BestInidivid)
+        
         for i in range(len(BestInidivid)):
             writer.writerow(
                 [BestInidivid[i][0]] + \

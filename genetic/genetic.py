@@ -35,8 +35,8 @@ class Individual:
         return self.__ALLELES
 
     def mutate(self, count:int=0, percepts=[1, 1, 1, 1]):
-        for _ in range(count):
-            for i in range(self.__ALLELES):
+        for i in range(self.__ALLELES):
+            for _ in range(count):
                 self.__chromosome[i].invert(randint(0, self.__DIM-1))
 
     def cross(self, other: 'Individual', mutate:float=None) -> 'Individual':
@@ -117,13 +117,13 @@ class Population():
         self.__ACCURACY = math.ceil(math.log2(dels))# + 1
         
         self.__best = None
-        self.__mod = (max(maxes) - min(maxes)) / dels
+        # self.__mod = (max(maxes) - min(maxes)) / dels
         self.__DIM = dim
         self.__MAXES = maxes
         self.__function = function
         self.__gen_res = None
-
-        self.step = step = 1.0 * ( max(self.__MAXES) - min(self.__MAXES) ) / ((2**(self.__ACCURACY) - 1) + 1)
+        # print('MAXES', self.__MAXES)
+        self.step = 1.0 * ( max(self.__MAXES) - min(self.__MAXES) ) / ((2**(self.__ACCURACY) - 1) + 1)
 
         self.__population = []
         for _ in range(populus_size):

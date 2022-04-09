@@ -1,5 +1,6 @@
 # importing libraries
 from cmath import pi
+from tkinter.tix import MAX
 from mpl_toolkits import mplot3d
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +17,10 @@ from genetic.genetic import *
 
 
 
-def make_graphic(folder: str, FUNCTION=LevyFull, N=2, MIN=-10, MAX=10, DIM=400, title='Levy function', **kwargs):
+def make_graphic(folder: str, FUNCTION=LevyFull, N=2, MIN=None, MAX=None, DIM=400, title='Levy function', REAL_MINIMA_X = np.array([1, 1]), **kwargs):
+
+    if (not os.path.isdir(folder)):
+        os.makedirs(folder)
 
     # N-dimensional X values
     x = []
@@ -26,7 +30,6 @@ def make_graphic(folder: str, FUNCTION=LevyFull, N=2, MIN=-10, MAX=10, DIM=400, 
     X = np.array(np.meshgrid(x[0], x[1]))
     F = FUNCTION(X)
 
-    REAL_MINIMA_X = np.array([1, 1])
     REAL_MINIMA   = FUNCTION(REAL_MINIMA_X)
 
     # Building graph
@@ -35,6 +38,7 @@ def make_graphic(folder: str, FUNCTION=LevyFull, N=2, MIN=-10, MAX=10, DIM=400, 
     ax = fig.add_subplot(1, 2, 1,projection ='3d')
 
     surf = ax.plot_surface(X[0], X[1], F, cmap='coolwarm', linewidth=0, alpha=0.7)#, cmap ='viridis', edgecolor ='green')
+
     ax.scatter(REAL_MINIMA_X[0], REAL_MINIMA_X[1], REAL_MINIMA,c="red", marker="x")
 
     ax.set_title(title)
@@ -52,7 +56,7 @@ def make_graphic(folder: str, FUNCTION=LevyFull, N=2, MIN=-10, MAX=10, DIM=400, 
     #fig.tight_layout()
     #plt.tight_layout()
     plt.savefig(f"{folder}/raw.png", dpi=300)
-
+    #plt.show()
     return (fig, ax, ax_projection)
 
 
@@ -64,7 +68,7 @@ def generate(
     need_to_see=[0, 1, 10, 25, 50, 100, 150, 200],
     FUNCTION=LevyFull,
     resdir:str="res",
-    N:int=2, MIN:int=-10, MAX:int=10, DIM:int=400,
+    N:int=2, MIN:int=None, MAX:int=None, DIM:int=400,
     fig=None, ax=None, ax_projection=None, title:str="Levy function", **kwargs):
 
     REZDIR = f"{resdir}/result_{stepname}"
@@ -168,15 +172,16 @@ def generate(
     return list(BestInidivid[-1])
 
 
-def RunGenetic(title: str, FUNCTION: Callable, folder:str, STEPS:int=10, POPULATION=50, GENERATIONS=250, **kwargs):
+def RunGenetic(title: str, FUNCTION: Callable, folder:str, STEPS:int=10, POPULATION=50, GENERATIONS=250,MIN=-10, MAX=10, **kwargs):
 
     if not os.path.isdir(folder): os.makedirs(folder)
 
-    fig, ax3d, subx = make_graphic(folder, FUNCTION=FUNCTION, title=title, **kwargs) 
+    fig, ax3d, subx = make_graphic(folder, FUNCTION=FUNCTION, title=title, MIN=MIN, MAX=MAX, **kwargs) 
     bests = []
     N = 2
     for i in range(STEPS):
         bests.append([i] + generate(
+                resdir=folder,
                 FUNCTION=FUNCTION,
                 title=title,
                 stepname=i,
@@ -185,6 +190,8 @@ def RunGenetic(title: str, FUNCTION: Callable, folder:str, STEPS:int=10, POPULAT
                 fig=fig,
                 ax=ax3d,
                 ax_projection=subx,
+                MAX=MAX,
+                MIN=MIN,
                 **kwargs
             ) 
         )
@@ -207,3 +214,26 @@ def RunGenetic(title: str, FUNCTION: Callable, folder:str, STEPS:int=10, POPULAT
 
 #a = np.array([np.uint8(123), np.uint8(123), np.uint8(123)])
 #print( np.unpackbits(a) )
+
+from functions.zakharov import Zakharov
+
+
+RunGenetic(
+    "Levy",
+    LevyFull,
+    "res/levy",
+    MIN=-10,
+    MAX=10,
+    STEPS=5,
+    REAL_MINIMA_X=np.array([1, 1])
+)
+
+RunGenetic(
+    "Zakharov",
+    Zakharov,
+    "res/zakharov",
+    MIN=-10,
+    MAX=10,
+    STEPS=5,
+    REAL_MINIMA_X=np.array([0, 0])
+)

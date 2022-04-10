@@ -17,7 +17,15 @@ from genetic.genetic import *
 
 
 
-def make_graphic(folder: str, FUNCTION=LevyFull, N=2, MIN=None, MAX=None, DIM=400, title='Levy function', REAL_MINIMA_X = np.array([1, 1]), **kwargs):
+def make_graphic(
+    folder: str,
+    FUNCTION=None,
+    N=2,
+    MIN=None, MAX=None,
+    DIM=400,
+    title='NONE function',
+    REAL_MINIMA_X = np.array([1, 1]),
+    **kwargs):
 
     if (not os.path.isdir(folder)):
         os.makedirs(folder)
@@ -65,11 +73,15 @@ def generate(
     GENERATIONS: int=200,
     POPULATION: int=100, #DIM
     CHROMO_DIM_COOF: int=128,
-    need_to_see=[0, 1, 10, 25, 50, 100, 150, 200],
-    FUNCTION=LevyFull,
+    need_to_see=[
+        0, 1, 10, 25, 50,
+        100, 150, 200, 250,
+        300, 350, 400, 450, 500],
+    FUNCTION=None,
     resdir:str="res",
     N:int=2, MIN:int=None, MAX:int=None, DIM:int=400,
-    fig=None, ax=None, ax_projection=None, title:str="Levy function", **kwargs):
+    fig=None, ax=None, ax_projection=None,
+    title:str="NONE function", **kwargs):
 
     REZDIR = f"{resdir}/result_{stepname}"
     if (not os.path.isdir(REZDIR)):
@@ -173,7 +185,14 @@ def generate(
     return list(BestInidivid[-1])
 
 
-def RunGenetic(title: str, FUNCTION: Callable, folder:str, STEPS:int=10, POPULATION=50, GENERATIONS=250,MIN=-10, MAX=10, **kwargs):
+def RunGenetic(
+    title: str,
+    FUNCTION: Callable,
+    folder:str,
+    STEPS:int=10,
+    POPULATION=75,
+    GENERATIONS=250,
+    MIN=-10, MAX=10, **kwargs):
 
     if not os.path.isdir(folder): os.makedirs(folder)
 
@@ -228,7 +247,7 @@ RunGenetic(
     STEPS=5,
     REAL_MINIMA_X=np.array([1, 1])
 )
-
+# '''
 RunGenetic(
     "Zakharov",
     Zakharov,
@@ -237,4 +256,4 @@ RunGenetic(
     MAX=10,
     STEPS=5,
     REAL_MINIMA_X=np.array([0, 0])
-)
+)#'''

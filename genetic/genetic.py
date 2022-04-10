@@ -9,12 +9,31 @@ from .strAllele import Allele
 
 from .errors import *
 
+def RANDOMCHROMO(first: 'Individual', second: 'Individual'):
+    return list(
+        [
+            list([
+                choice(
+                    [
+                        first[i].get_bit(j),
+                        second[i].get_bit(j)
+                    ]
+                ) for j in range(first.get_allele_size())
+            ])
+        for i in range(len(first)) ] 
+    )
+
+
 class Individual:
     __ALLELES: int # count of Gene Alleles 
     __DIM: int # Size of each gen
     __chromosome: 'np.ndarray[Allele]' # Chromosome.
         #Each gene is integer value with fixed __DIM bit length.
-    
+    __GETCHILDCHROMO: Callable
+
+    def __getitem__(self, arg):
+        return self.__chromosome[arg]
+
     def __str__(self) -> str:
         return f"<Individual: {self.__ALLELES} {self.__DIM}> {list([str(i) for i in self.__chromosome])} ;" 
 
@@ -33,6 +52,9 @@ class Individual:
 
     def __len__(self) -> int:
         return self.__ALLELES
+    
+    def get_allele_size(self) -> int:
+        return self.__DIM
 
     def mutate(self, count:int=0, percepts=[1, 1, 1, 1]):
         for i in range(self.__ALLELES):
@@ -44,31 +66,8 @@ class Individual:
 
         if self.__DIM != len(other.get_allele()[0]) : raise NOT_EQUAL
 
-        child = []
-
-        partner = other.get_allele()
-
-        for i in range(self.__ALLELES):
-            child.append(
-                Allele(
-                    self.__DIM,
-                    data=''.join( # !TODO UPDATE THIS PLS
-                        [
-                            choice(
-                                [
-                                    self.__chromosome[i].get_bit(j),
-                                    partner[i].get_bit(j)
-                                ]
-                            ) for j in range(self.__DIM)
-                        ]
-                    )
-                )
-            )
-
-        #
-        # A = [1, 2, 3, 4, 5, 6]
-        # B = " ".join(A)
-        # B.split(", ")
+        # partner = other.get_allele()
+        child = list(map( lambda x: Allele(self.__DIM, data=''.join(x)), self.__GETCHILDCHROMO( self, other )))
 
         child = np.array(child)
         child = Individual(self.__ALLELES, self.__DIM, child)
@@ -76,11 +75,13 @@ class Individual:
 
         return child
 
-    def __init__(self, __ALLELES: int, __DIM: int, __chromosome=None, mutate=None):
+    def __init__(self, __ALLELES: int, __DIM: int, __chromosome=None, mutate=None, __GETCHILDCHROMO:Callable=RANDOMCHROMO):
         if __ALLELES < 2: raise SIZE_ERROR(__ALLELES, "ALLELES")
         if __DIM < 2  : raise SIZE_ERROR(__DIM, "DIM")
         if __chromosome is not None and (len(__chromosome) != __ALLELES or \
             len(__chromosome[0]) != __DIM): raise NOT_EQUAL(__ALLELES)
+
+        self.__GETCHILDCHROMO = __GETCHILDCHROMO
 
         self.__ALLELES = __ALLELES
         self.__DIM = __DIM

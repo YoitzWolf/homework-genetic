@@ -101,11 +101,13 @@ class Population():
     __mod: float
     __ACCURACY: int # Accuracy = Allel size
     __DIM: int # count of dimensions of argument (Count of Allels in Individual)
-    __MAXES: Tuple[Tuple[float]] # table of maximum values for every dimension
+    __MAXES: Tuple[float] # max_min if limits are equal
     __population: List[Individual] # List of Individuals
     __function: Callable
     __gen_res: List[Tuple[float]]
     __best: Tuple[Tuple, float]
+    
+    __LIMITS: Tuple[Tuple[float]] # table of maximum values for every dimension
 
     def get_accuracy(self):
         return self.__ACCURACY
@@ -113,18 +115,29 @@ class Population():
     def get_best(self):
         return self.__best
 
-    def __init__(self, populus_size: int, dim: int, dels: int, maxes: Tuple[float], function: Callable):
+    def __init__(self, populus_size: int, dim: int, dels: int, function: Callable, maxes: Tuple[float]=None, limits:Tuple[Tuple[float]]=None):
         
         self.__ACCURACY = math.ceil(math.log2(dels))# + 1
         
         self.__best = None
         # self.__mod = (max(maxes) - min(maxes)) / dels
         self.__DIM = dim
+        
+        self.__LIMITS = limits
         self.__MAXES = maxes
+
         self.__function = function
         self.__gen_res = None
         # print('MAXES', self.__MAXES)
-        self.step = 1.0 * ( max(self.__MAXES) - min(self.__MAXES) ) / ((2**(self.__ACCURACY) - 1) + 1)
+
+        if self.__LIMITS is None:
+            self.step = 1.0 * ( max(self.__MAXES) - min(self.__MAXES) ) / ((2**(self.__ACCURACY) - 1) + 1)
+        else:
+            self.step = []
+            for i in range(len(self.__LIMITS)):
+                self.step.append(
+                    1.0 * ( max(self.__LIMITS[i]) - min(self.__LIMITS[i]) ) / ((2**(self.__ACCURACY) - 1) + 1)
+                )
 
         self.__population = []
         for _ in range(populus_size):
@@ -136,9 +149,12 @@ class Population():
                 )
             )
     
-    def __modulate(self, x: int) -> 'np.ndarray[Allele]':
+    def __modulate(self, x: int, index:int=0) -> 'np.ndarray[Allele]':
         # print("STEP >", f"[ {x} ] ", 2**self.__ACCURACY - 1, x*step)
-        return (x * self.step)
+        if self.__LIMITS is None:
+            return (x * self.step)
+        else:
+            return (x * self.step[index])
         
     def count(self) -> list:
         #if self.__gen_res is None:
@@ -148,7 +164,8 @@ class Population():
         self.__gen_res = []
         for i in range(len(self.__population)):
             #print(self.__population[i].get_vector())
-            xs = np.array([ self.__modulate(x) for x in self.__population[i].get_vector() ])
+            populus = self.__population[i].get_vector()
+            xs = np.array([ self.__modulate(populus[x], index=x) for x in range(len(populus)) ])
             #print(xs)
             z = self.__function(xs)
             self.__gen_res. append(

@@ -8,6 +8,9 @@ class Allele:
                 # Max value is (2^__DIM - 1)
     __DIM: int  # Fixed size of Allele (Genes count)
 
+    def set(self, data):
+        self.__data = data
+
     def __len__(self) -> int:
         return self.__DIM
 

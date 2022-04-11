@@ -24,7 +24,8 @@ def make_graphic(
     MIN=None, MAX=None,
     DIM=400,
     title='NONE function',
-    REAL_MINIMA_X = np.array([1, 1]),
+    REAL_MINIMA_X = [np.array([1, 1])],
+    limits=None,
     **kwargs):
 
     if (not os.path.isdir(folder)):
@@ -32,23 +33,23 @@ def make_graphic(
 
     # N-dimensional X values
     x = []
-    for i in range(N):
-        x.append(np.linspace(MIN, MAX, DIM))
+    if limits is None:
+        for i in range(N):
+            x.append(np.linspace(MIN, MAX, DIM))
+    else:
+        for i in range(N):
+            x.append(np.linspace(limits[i][0], limits[i][1], DIM))
 
     X = np.array(np.meshgrid(x[0], x[1]))
     F = FUNCTION(X)
-
-    REAL_MINIMA   = FUNCTION(REAL_MINIMA_X)
 
     # Building graph
     fig = plt.figure(figsize=(20, 10))
     # syntax for 3-D plotting
     ax = fig.add_subplot(1, 2, 1,projection ='3d')
 
-    surf = ax.plot_surface(X[0], X[1], F, cmap='coolwarm', linewidth=0, alpha=0.7)#, cmap ='viridis', edgecolor ='green')
-
-    ax.scatter(REAL_MINIMA_X[0], REAL_MINIMA_X[1], REAL_MINIMA,c="red", marker="x")
-
+    surf = ax.plot_surface(X[0], X[1], F, cmap='coolwarm', linewidth=0, alpha=0.7)
+    #, cmap ='viridis', edgecolor ='green')
     ax.set_title(title)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -56,9 +57,13 @@ def make_graphic(
 
     #ax.set_zlim(-20, 100)
     ax_projection = fig.add_subplot(1, 2, 2)
-    cset = ax_projection.contourf(X[0], X[1], F, 256, cmap='coolwarm', origin='lower')
-    ax_projection.scatter(REAL_MINIMA_X[0], REAL_MINIMA_X[1], c="red", marker="x")
 
+    for i in range(len(REAL_MINIMA_X)):
+        REAL_MINIMA = FUNCTION(REAL_MINIMA_X[i])
+        ax.scatter(REAL_MINIMA_X[i][0], REAL_MINIMA_X[i][1], REAL_MINIMA,c="red", marker="x")
+        ax_projection.scatter(REAL_MINIMA_X[i][0], REAL_MINIMA_X[i][1], c="red", marker="x")
+
+    cset = ax_projection.contourf(X[0], X[1], F, 256, cmap='coolwarm', origin='lower')
     fig.colorbar(cset, shrink=0.5, aspect=5)
 
     #fig.tight_layout()
@@ -79,18 +84,26 @@ def generate(
         300, 350, 400, 450, 500],
     FUNCTION=None,
     resdir:str="res",
-    N:int=2, MIN:int=None, MAX:int=None, DIM:int=400,
+    N:int=2, DIM:int=400,
     fig=None, ax=None, ax_projection=None,
-    title:str="NONE function", **kwargs):
+    title:str="NONE function",
+    MIN:int=None, MAX:int=None, 
+    limits:tuple=None,
+    **kwargs):
 
     REZDIR = f"{resdir}/result_{stepname}"
     if (not os.path.isdir(REZDIR)):
         os.makedirs(REZDIR)
     
     if fig is None or ax is None or ax_projection is None:
-        fig, ax, ax_projection = make_graphic(resdir, FUNCTION=FUNCTION, N=N, MIN=MIN, MAX=MAX, DIM=DIM, title=title)
+        fig, ax, ax_projection = make_graphic(
+            resdir, FUNCTION=FUNCTION, N=N, MIN=MIN, MAX=MAX, DIM=DIM, title=title, limits=limits)
 
-    pop = Population(POPULATION, N, CHROMO_DIM_COOF*DIM, (MIN, MAX), FUNCTION)
+    mx = (MIN, MAX)
+    if MIN is None or MAX is None:
+        mx = None
+
+    pop = Population(POPULATION, N, CHROMO_DIM_COOF*DIM, FUNCTION, maxes=mx, limits=limits)
 
     CHROMO_SIZE = pop.get_accuracy()
 
@@ -162,6 +175,14 @@ def generate(
         writer.writerow(["Размерность вектора агрументов", N])
         writer.writerow(["Размер хромосомы (бит)", CHROMO_SIZE])
         writer.writerow(["Размер популяции", POPULATION])
+        if limits is not None:
+            for i in range(N):
+                writer.writerow([f"Минимум аргумента {i+1}", limits[i][0]])
+                writer.writerow([f"Максимум аргумента {i+1}", limits[i][1]])
+        else:
+            writer.writerow([f"Минимум аргумента", MIN])
+            writer.writerow([f"Максимум аргумента", MAX])
+
         writer.writerow(["Достижимая погрешность", round((20) / (2**(CHROMO_SIZE) - 1), 4) ])
 
         argfile.close()
@@ -192,11 +213,11 @@ def RunGenetic(
     STEPS:int=10,
     POPULATION=75,
     GENERATIONS=250,
-    MIN=-10, MAX=10, **kwargs):
+    MIN=None, MAX=None, limits=None, **kwargs):
 
     if not os.path.isdir(folder): os.makedirs(folder)
 
-    fig, ax3d, subx = make_graphic(folder, FUNCTION=FUNCTION, title=title, MIN=MIN, MAX=MAX, **kwargs) 
+    fig, ax3d, subx = make_graphic(folder, FUNCTION=FUNCTION, title=title, MIN=MIN, MAX=MAX, limits=limits, **kwargs) 
     bests = []
     N = 2
     for i in range(STEPS):
@@ -212,6 +233,7 @@ def RunGenetic(
                 ax_projection=subx,
                 MAX=MAX,
                 MIN=MIN,
+                limits=limits,
                 **kwargs
             ) 
         )
@@ -242,12 +264,11 @@ RunGenetic(
     "Levy",
     LevyFull,
     "res/levy",
-    MIN=-10,
-    MAX=10,
-    STEPS=5,
-    REAL_MINIMA_X=np.array([1, 1])
+    STEPS=1,
+    limits=( (-10, 10), (-10, 10) ),
+    REAL_MINIMA_X=[np.array([1, 1])]
 )
-# '''
+'''
 RunGenetic(
     "Zakharov",
     Zakharov,
@@ -255,5 +276,5 @@ RunGenetic(
     MIN=-10,
     MAX=10,
     STEPS=5,
-    REAL_MINIMA_X=np.array([0, 0])
+    REAL_MINIMA_X=[np.array([0, 0])]
 )#'''

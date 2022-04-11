@@ -152,9 +152,9 @@ class Population():
     def __modulate(self, x: int, index:int=0) -> 'np.ndarray[Allele]':
         # print("STEP >", f"[ {x} ] ", 2**self.__ACCURACY - 1, x*step)
         if self.__LIMITS is None:
-            return (x * self.step)
+            return self.MIN + (x * self.step)
         else:
-            return (x * self.step[index])
+            return self.__LIMITS[index][0] + (x * self.step[index])
         
     def count(self) -> list:
         #if self.__gen_res is None:

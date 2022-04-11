@@ -24,7 +24,7 @@ class Allele:
         return "" + self.__data
 
     def get_data(self) -> int:
-        return int(self.__data[1:], 2) * (-1 if self.__data[0] == "1" else 1)
+        return int(self.__data, 2)# * (-1 if self.__data[0] == "1" else 1)
 
     def get_bit(self, n: int) -> int:
         if self.__DIM <= n: raise INDEX_ERR

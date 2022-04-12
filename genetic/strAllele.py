@@ -60,3 +60,6 @@ class Allele:
             self.__data = '1' * (self.__DIM)
         else:
             self.__data = data
+    
+    def clear(self):
+        self.__data = '1' * (self.__DIM)

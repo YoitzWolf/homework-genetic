@@ -1,4 +1,5 @@
 # importing libraries
+from audioop import reverse
 from cmath import pi
 from tkinter.tix import MAX
 from mpl_toolkits import mplot3d
@@ -12,6 +13,8 @@ import csv
 import sys
 import os
 
+from sqlalchemy import true
+
 from functions.levy import *
 from genetic.genetic import *
 
@@ -24,7 +27,7 @@ def make_graphic(
     MIN=None, MAX=None,
     DIM=400,
     title='NONE function',
-    REAL_MINIMA_X = [np.array([1, 1])],
+    REAL_MINIMA_X = None, #[np.array([1, 1])],
     limits=None,
     **kwargs):
 
@@ -42,6 +45,9 @@ def make_graphic(
 
     X = np.array(np.meshgrid(x[0], x[1]))
     F = FUNCTION(X)
+    # input("Here")
+
+    # print(X, np.prod(X))
 
     # Building graph
     fig = plt.figure(figsize=(20, 10))
@@ -57,15 +63,18 @@ def make_graphic(
 
     #ax.set_zlim(-20, 100)
     ax_projection = fig.add_subplot(1, 2, 2)
-
-    for i in range(len(REAL_MINIMA_X)):
-        REAL_MINIMA = FUNCTION(REAL_MINIMA_X[i])
-        ax.scatter(REAL_MINIMA_X[i][0], REAL_MINIMA_X[i][1], REAL_MINIMA,c="red", marker="x")
-        ax_projection.scatter(REAL_MINIMA_X[i][0], REAL_MINIMA_X[i][1], c="red", marker="x")
-
+    # print(REAL_MINIMA_X)
     cset = ax_projection.contourf(X[0], X[1], F, 256, cmap='coolwarm', origin='lower')
     fig.colorbar(cset, shrink=0.5, aspect=5)
 
+    if REAL_MINIMA_X is not None:
+        for i in range(len(REAL_MINIMA_X)):
+            REAL_MINIMA = FUNCTION(REAL_MINIMA_X[i])
+            ax.scatter(REAL_MINIMA_X[i][0], REAL_MINIMA_X[i][1], REAL_MINIMA, c="red", marker="x")
+            ax_projection.scatter(REAL_MINIMA_X[i][0], REAL_MINIMA_X[i][1], c="red", marker="x")
+        if FUNCTION == G3:
+            c = plt.Circle((0, 0), 1, fill=False)
+            ax_projection.add_artist(c)
     #fig.tight_layout()
     #plt.tight_layout()
     plt.savefig(f"{folder}/raw.png", dpi=300)
@@ -89,7 +98,13 @@ def generate(
     title:str="NONE function",
     MIN:int=None, MAX:int=None, 
     limits:tuple=None,
+    KEYFUNCTION:Callable=lambda x: 0,
+    REAL_MINIMA_X=None,
     **kwargs):
+
+    reverse = False
+    if "reverse" in kwargs:
+        reverse = kwargs["reverse"]
 
     REZDIR = f"{resdir}/result_{stepname}"
     if (not os.path.isdir(REZDIR)):
@@ -97,13 +112,14 @@ def generate(
     
     if fig is None or ax is None or ax_projection is None:
         fig, ax, ax_projection = make_graphic(
-            resdir, FUNCTION=FUNCTION, N=N, MIN=MIN, MAX=MAX, DIM=DIM, title=title, limits=limits)
+            resdir, FUNCTION=FUNCTION, N=N,
+            MIN=MIN, MAX=MAX, DIM=DIM, title=title, limits=limits, REAL_MINIMA_X=REAL_MINIMA_X)
 
     mx = (MIN, MAX)
     if MIN is None or MAX is None:
         mx = None
 
-    pop = Population(POPULATION, N, CHROMO_DIM_COOF*DIM, FUNCTION, maxes=mx, limits=limits)
+    pop = Population(POPULATION, N, CHROMO_DIM_COOF*DIM, FUNCTION, maxes=mx, limits=limits, KEYFUNCTION=KEYFUNCTION, reverse=reverse)
 
     CHROMO_SIZE = pop.get_accuracy()
 
@@ -129,8 +145,6 @@ def generate(
         #while len(ax.collections) >= 3 : ax.collections.remove(ax.collections[2])
         #print(_)
         if _ % 5 == 0 or _ in need_to_see:#in need_to_see:
-            
-
             exits = []
             
             if _ in need_to_see:
@@ -197,7 +211,7 @@ def generate(
             writer.writerow(
                 [BestInidivid[i][0]] + \
                 ([] + list(BestInidivid[i][1][0])) + \
-                [BestInidivid[i][1][1]]
+                [BestInidivid[i][1][1][-1]]
             )
         
 
@@ -217,7 +231,9 @@ def RunGenetic(
 
     if not os.path.isdir(folder): os.makedirs(folder)
 
-    fig, ax3d, subx = make_graphic(folder, FUNCTION=FUNCTION, title=title, MIN=MIN, MAX=MAX, limits=limits, **kwargs) 
+    fig, ax3d, subx = make_graphic(
+        folder, FUNCTION=FUNCTION, title=title, MIN=MIN, MAX=MAX, limits=limits, **kwargs
+    ) 
     bests = []
     N = 2
     for i in range(STEPS):
@@ -253,28 +269,48 @@ def RunGenetic(
 
             argfile.close()
 
-
 #a = np.array([np.uint8(123), np.uint8(123), np.uint8(123)])
 #print( np.unpackbits(a) )
 
-from functions.zakharov import Zakharov
+from functions.zakharov import *
 
+from functions.g3 import *
+
+EPS = 0.01
+
+def kf(x):
+    # print(x)
+    ax = round(abs(x[0]**2 + x[1]**2 - 1), 4)
+    return -ax if ax <= EPS else ax*-10000 # *1000
+
+RunGenetic(
+    "G3",
+    G3,
+    "res/g3",
+    STEPS=5,
+    GENERATIONS=500,
+    POPULATION=250,
+    limits=[(0, 1), (0, 1)],
+    REAL_MINIMA_X=[ (1/np.sqrt(2), 1/np.sqrt(2)) ],
+    KEYFUNCTION=kf,
+    reverse=True # 1000 if abs(x[0]**2 + x[1]**2 - 1) >= EPS else 0
+)
 
 RunGenetic(
     "Levy",
     LevyFull,
     "res/levy",
-    STEPS=1,
+    STEPS=5,
     limits=( (-10, 10), (-10, 10) ),
     REAL_MINIMA_X=[np.array([1, 1])]
 )
-'''
+
+
 RunGenetic(
     "Zakharov",
     Zakharov,
     "res/zakharov",
-    MIN=-10,
-    MAX=10,
     STEPS=5,
+    limits=( (-10, 10), (-10, 10) ),
     REAL_MINIMA_X=[np.array([0, 0])]
 )#'''

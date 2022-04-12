@@ -47,6 +47,13 @@ class Individual:
         ]
         return np.array(w)
     
+    def get_list(self) -> list:
+        w = [
+            gene.get_data()
+            for gene in self.__chromosome
+        ]
+        return list(w)
+    
     def get_allele(self) -> 'np.ndarray[Allele]':
         return self.__chromosome
 
@@ -70,18 +77,19 @@ class Individual:
         child = list(map( lambda x: Allele(self.__DIM, data=''.join(x)), self.__GETCHILDCHROMO( self, other )))
 
         child = np.array(child)
-        child = Individual(self.__ALLELES, self.__DIM, child)
+        child = Individual(self.__ALLELES, self.__DIM, child, __GETCHILDCHROMO=self.__GETCHILDCHROMO, MODULATOR=self.__MODULATOR)
         if mutate is not None: child.mutate(count=int(self.__DIM * mutate) )
 
         return child
 
-    def __init__(self, __ALLELES: int, __DIM: int, __chromosome=None, mutate=None, __GETCHILDCHROMO:Callable=RANDOMCHROMO):
+    def __init__(self, __ALLELES: int, __DIM: int, __chromosome=None, mutate=None, __GETCHILDCHROMO:Callable=RANDOMCHROMO, MODULATOR: Callable=None, **kwargs):
         if __ALLELES < 2: raise SIZE_ERROR(__ALLELES, "ALLELES")
         if __DIM < 2  : raise SIZE_ERROR(__DIM, "DIM")
         if __chromosome is not None and (len(__chromosome) != __ALLELES or \
             len(__chromosome[0]) != __DIM): raise NOT_EQUAL(__ALLELES)
 
         self.__GETCHILDCHROMO = __GETCHILDCHROMO
+        self.__MODULATOR = MODULATOR
 
         self.__ALLELES = __ALLELES
         self.__DIM = __DIM
@@ -115,7 +123,7 @@ class Population():
     def get_best(self):
         return self.__best
 
-    def __init__(self, populus_size: int, dim: int, dels: int, function: Callable, maxes: Tuple[float]=None, limits:Tuple[Tuple[float]]=None):
+    def __init__(self, populus_size: int, dim: int, dels: int, function: Callable, maxes: Tuple[float]=None, limits:Tuple[Tuple[float]]=None, IndividualArgs:dict={}, MODULATOR:Callable=None, KEYFUNCTION: Callable=None,reverse=True, **kwargs):
         
         self.__ACCURACY = math.ceil(math.log2(dels))# + 1
         
@@ -123,8 +131,14 @@ class Population():
         # self.__mod = (max(maxes) - min(maxes)) / dels
         self.__DIM = dim
         
+        self.IndividualArgs = IndividualArgs
+        self.MODULATOR = MODULATOR
+
         self.__LIMITS = limits
         self.__MAXES = maxes
+
+        self.reverse = reverse
+        self.KEYFUNCTION = KEYFUNCTION
 
         self.__function = function
         self.__gen_res = None
@@ -144,8 +158,10 @@ class Population():
             self.__population.append(
                 Individual(
                     self.__DIM,
-                    self.__ACCURACY#,
-                    #mutate=0.6
+                    self.__ACCURACY,
+                    MODULATOR=self.MODULATOR,
+                    mutate=0.7,
+                    **self.IndividualArgs
                 )
             )
     
@@ -165,19 +181,39 @@ class Population():
         for i in range(len(self.__population)):
             #print(self.__population[i].get_vector())
             populus = self.__population[i].get_vector()
-            xs = np.array([ self.__modulate(populus[x], index=x) for x in range(len(populus)) ])
+            if self.MODULATOR is None:
+                xs = np.array([ self.__modulate(populus[x], index=x) for x in range(len(populus)) ])
+            else:
+                xs = np.array(self.MODULATOR(xs))
             #print(xs)
             z = self.__function(xs)
             self.__gen_res. append(
                 (*xs, z) # (1, 2, 3, 4, 12412)
             )
-            if self.__best is None or self.__best[1] >= z:
-                self.__best = (tuple(xs), z)
+            # if self.__best is None or (self.__best[1] >= z and not self.reverse) or (self.__best[1] <= z and self.reverse):
+            #     self.__best = (tuple(xs), z)
+
+        self.__best = sorted(
+            enumerate(self.__population),
+            key=lambda x: self.__gen_res[x[0]][-1] + self.KEYFUNCTION(self.__gen_res[x[0]][:-1]),
+            reverse=self.reverse
+        )[0]
+
+        self.__best = (tuple(
+            [
+                self.__modulate(i)
+                for i in self.__best[1].get_list()
+            ]
+        ), self.__gen_res[self.__best[0]])
+
+        # print(self.__best)
         return [] + self.__gen_res
-    
+
     def next(self):
         s = sorted(
-            enumerate(self.__population), key=lambda x: self.__gen_res[x[0]][-1]
+            enumerate(self.__population),
+            key=lambda x: self.__gen_res[x[0]][-1] + self.KEYFUNCTION(self.__gen_res[x[0]][:-1]),
+            reverse=self.reverse
         )
         # 
         # [a, b, c] -> enumerate([..]) = [(0, a) (1, b) (2, c)]
